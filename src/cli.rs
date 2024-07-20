@@ -24,7 +24,10 @@ impl CLI {
 
     pub async fn start(&mut self) -> Result<()> {
         self.cache.load()?;
-        self.cache.update().await?;
+        // self.cache.update().await?;
+        for e in self.cache.get_anime(1).await?.episodes {
+            println!("{} -> {}", e.name, e.url);
+        }
         Ok(())
         // loop {
         //     self.show_actions();

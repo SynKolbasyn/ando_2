@@ -1,8 +1,9 @@
 use anyhow::{Result, Context};
 
-use select::document::Document;
-use select::predicate::{Class, Name, Predicate};
+use select::{document::Document, predicate::Class};
+
 use crate::anime::{Anime, Episode, Quality};
+
 
 pub struct Parser {
 
@@ -23,16 +24,17 @@ impl Parser {
         }
     }
 
-    pub fn parse_anime_list(&self, anime_list_html: String) -> Result<Vec<String>> {
-        let mut result: Vec<String> = Vec::new();
+    pub fn parse_anime_list(&self, anime_list_html: String) -> Result<Vec<Anime>> {
+        let mut result: Vec<Anime> = Vec::new();
         
         let document: Document = Document::from(anime_list_html.as_str());
         for node in document.find(Class("all_anime_global")) {
-            let url: String = node.first_child().context("Error when searching for an anime link")?
-                .attr("href").context("Error when searching for an anime link")?.to_string();
             let name: String = node.text().trim().split("\n").next()
                 .context("Error when searching for an anime link")?.to_string();
-            result.push(format!("{}: https://jut.su{}", name, url));
+            let url: &str = node.first_child().context("Error when searching for an anime link")?
+                .attr("href").context("Error when searching for an anime link")?;
+            let anime: Anime = Anime::new(name, format!("https://jut.su{url}"), Vec::default());
+            result.push(anime);
         }
         
         Ok(result)
@@ -45,7 +47,7 @@ impl Parser {
         for node in document.find(Class("short-btn")) {
             let name: String = node.text();
             let url: &str = node.attr("href").context("Error when searching for an anime link")?;
-            let episode: Episode = Episode::new(name, url, Quality::default());
+            let episode: Episode = Episode::new(name, format!("https://jut.su{url}"), Quality::default());
             anime.episodes.push(episode);
         }
 

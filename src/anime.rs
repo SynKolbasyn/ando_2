@@ -1,7 +1,7 @@
 use serde::{Deserialize, Serialize};
 
 
-#[derive(Serialize, Deserialize)]
+#[derive(Clone, Serialize, Deserialize)]
 pub struct Anime {
     pub name: String,
     pub url: String,
@@ -31,7 +31,7 @@ impl Anime {
 }
 
 
-#[derive(Serialize, Deserialize)]
+#[derive(Clone, Serialize, Deserialize)]
 pub struct Episode {
     pub name: String,
     pub url: String,
@@ -61,7 +61,7 @@ impl Episode {
 }
 
 
-#[derive(Serialize, Deserialize)]
+#[derive(Clone, Serialize, Deserialize)]
 pub struct Quality {
     pub url_360p: Option<String>,
     pub url_480p: Option<String>,

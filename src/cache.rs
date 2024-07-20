@@ -22,7 +22,7 @@ pub struct Cache {
     path: String,
     settings: Settings,
     pages: u64,
-    found_anime: Vec<Anime>,
+    anime: Vec<Anime>,
     site: String,
 }
 
@@ -49,7 +49,7 @@ impl Cache {
         path: P,
         settings: Settings,
         pages: u64,
-        found_anime: Vec<Anime>,
+        anime: Vec<Anime>,
         site: S,
     ) -> Self {
         Self {
@@ -58,7 +58,7 @@ impl Cache {
             path: path.to_string(),
             settings,
             pages,
-            found_anime,
+            anime,
             site: site.to_string(),
         }
     }
@@ -93,7 +93,8 @@ impl Cache {
     pub async fn update(&mut self) -> Result<()> {
         let pages: u64 = self.pages;
         self.pages = 2;
-        self.site = self.net.get_anime_html(&mut self.pages, pages).await?;
+        self.site = self.net.get_anime_list_html(&mut self.pages, pages).await?;
+        self.anime = self.parser.parse_anime_list(self.site.clone())?;
 
         if !self.folder()?.exists() {
             create_dir_all(self.folder()?)?;
@@ -105,6 +106,16 @@ impl Cache {
         serde_json::to_writer_pretty(file, self)?;
         
         Ok(())
+    }
+    
+    pub fn get_anime_list(&self) -> Vec<Anime> {
+        self.anime.clone()
+    }
+    
+    pub async fn get_anime(&self, id: usize) -> Result<Anime> {
+        let anime: Anime = self.anime[id].clone();
+        let anime_html: String = self.net.get_anime_html(anime.url).await?;
+        self.parser.parse_anime(anime_html)
     }
     
     fn folder(&self) -> Result<&Path> {

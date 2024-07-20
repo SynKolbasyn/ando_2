@@ -1,8 +1,10 @@
 use std::time::Duration;
 
 use anyhow::{Result, bail};
+
 use indicatif::{ProgressBar, ProgressStyle};
-use reqwest::{Client, Response};
+
+use reqwest::{Client, IntoUrl, Response};
 use tokio::time::sleep;
 
 
@@ -25,7 +27,7 @@ impl Net {
         }
     }
 
-    pub async fn get_anime_html(&self, from_page: &mut u64, pages: u64) -> Result<String> {
+    pub async fn get_anime_list_html(&self, from_page: &mut u64, pages: u64) -> Result<String> {
         let spinner_style: ProgressStyle = ProgressStyle::with_template(
             "{prefix:.bold.dim} {spinner} {wide_msg}"
         )?.tick_chars("⠁⠂⠄⡀⢀⠠⠐⠈ ");
@@ -73,5 +75,9 @@ impl Net {
         }
 
         Ok(result)
+    }
+    
+    pub async fn get_anime_html<URL: IntoUrl>(&self, url: URL) -> Result<String> {
+        Ok(self.client.get(url).send().await?.text().await?)
     }
 }
