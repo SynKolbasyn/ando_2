@@ -8,7 +8,9 @@ use anyhow::{bail, Context, Result};
 use indicatif::{MultiProgress, ProgressBar, ProgressStyle};
 
 use rayon::prelude::*;
+
 use tokio::task::JoinHandle;
+
 use crate::anime::{Anime, Episode, Quality};
 use crate::cache::Cache;
 use crate::cli::states::State;

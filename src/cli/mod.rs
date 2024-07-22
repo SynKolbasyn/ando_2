@@ -3,7 +3,9 @@ mod main_menu;
 mod settings_menu;
 mod download_menu;
 
+
 use std::io::stdin;
+
 use anyhow::Result;
 
 use crate::cache::Cache;

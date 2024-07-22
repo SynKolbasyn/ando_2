@@ -1,6 +1,7 @@
 use std::io::{stdout, Write};
 
 use anyhow::{Context, Result};
+
 use crate::cache::Cache;
 use crate::cli::states::State;
 use crate::settings::{Options, Settings};

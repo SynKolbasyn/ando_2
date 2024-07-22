@@ -4,7 +4,9 @@ use std::{
 };
 
 use anyhow::{Result, Context};
-use indicatif::{MultiProgress, ProgressBar};
+
+use indicatif::ProgressBar;
+
 use serde::{Deserialize, Serialize};
 
 use crate::anime::{Anime, Episode, Quality};

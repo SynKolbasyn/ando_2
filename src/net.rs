@@ -2,14 +2,17 @@ use std::time::Duration;
 
 use anyhow::{Result, bail, Context};
 
-use indicatif::{MultiProgress, ProgressBar, ProgressStyle};
+use indicatif::{ProgressBar, ProgressStyle};
 
 use rayon::prelude::*;
 
 use reqwest::{Client, IntoUrl, Response};
-use tokio::fs::{create_dir_all, File};
+use tokio::{
+    time::sleep,
+    fs::{create_dir_all, File},
+};
 use futures::StreamExt;
-use tokio::time::sleep;
+
 use crate::anime::{Episode, Quality};
 
 
