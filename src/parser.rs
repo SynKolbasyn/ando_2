@@ -1,10 +1,15 @@
+use std::collections::BTreeSet;
 use anyhow::{Result, Context};
 
-use select::{document::Document, predicate::Class};
+use select::{
+    document::Document,
+    predicate::{Class, Name},
+};
 
 use crate::anime::{Anime, Episode, Quality};
 
 
+#[derive(Clone)]
 pub struct Parser {
 
 }
@@ -47,10 +52,21 @@ impl Parser {
         for node in document.find(Class("short-btn")) {
             let name: String = node.text();
             let url: &str = node.attr("href").context("Error when searching for an anime link")?;
-            let episode: Episode = Episode::new(name, format!("https://jut.su{url}"), Quality::default());
+            let episode: Episode = Episode::new(name, format!("https://jut.su{url}"), BTreeSet::new());
             anime.episodes.push(episode);
         }
 
         Ok(anime)
+    }
+    
+    pub fn parse_episode(&self, episode_html: String) -> Result<Episode> {
+        let mut episode: Episode = Episode::default();
+
+        let document: Document = Document::from(episode_html.as_str());
+        for node in document.find(Name("source")) {
+            episode.quality.insert(Quality::from(node)?);
+        }
+        
+        Ok(episode)
     }
 }

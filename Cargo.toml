@@ -1,6 +1,6 @@
 [package]
 name = "ando_2"
-version = "0.1.0"
+version = "0.2.0"
 edition = "2021"
 
 [dependencies]
@@ -8,10 +8,13 @@ anyhow = "1.0.86"
 
 select = "0.6.0"
 
-reqwest = "0.12.5"
+reqwest = { version = "0.12.5", features = ["stream"] }
 tokio = { version = "1.38.1", features = ["full"] }
+futures = "0.3.30"
 
 serde = { version = "1.0.204", features = ["derive"] }
 serde_json = "1.0.120"
 
 indicatif = "0.17.8"
+
+rayon = "1.10.0"
