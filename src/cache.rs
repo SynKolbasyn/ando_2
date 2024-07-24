@@ -110,17 +110,21 @@ impl Cache {
         Ok(())
     }
     
-    pub fn get_anime_list(&self) -> Vec<Anime> {
-        self.anime.clone()
-    }
-    
-    pub async fn get_anime(&self, id: usize) -> Result<Anime> {
-        let anime: Anime = self.anime
-            .get(id)
-            .context("Error when trying to select an anime")?
-            .clone();
+    pub async fn get_anime_self(&self, anime: Anime) -> Result<Anime> {
         let anime_html: String = self.net.get_anime_html(anime.url).await?;
-        self.parser.parse_anime(anime_html)
+        Ok(self.parser.parse_anime(anime_html)?)
+    }
+
+    pub fn get_anime_name(&self, name: String) -> Result<Vec<Anime>> {
+        let mut result: Vec<Anime> = Vec::new();
+        
+        for anime in &self.anime {
+            if anime.name.to_lowercase().contains(name.to_lowercase().as_str()) {
+                result.push(anime.clone());
+            }
+        }
+        
+        Ok(result)
     }
     
     pub async fn download_episode(&self, mut episode: Episode, quality: Quality, pb: &ProgressBar) -> Result<()> {

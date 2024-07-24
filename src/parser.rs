@@ -59,7 +59,7 @@ impl Parser {
 
         Ok(anime)
     }
-    
+
     pub fn parse_episode(&self, episode_html: String) -> Result<Episode> {
         let mut episode: Episode = Episode::default();
 
@@ -67,7 +67,7 @@ impl Parser {
         for node in document.find(Name("source")) {
             episode.quality.insert(Quality::from(node)?);
         }
-        
+
         Ok(episode)
     }
 }

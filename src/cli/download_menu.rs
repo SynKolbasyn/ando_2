@@ -19,6 +19,7 @@ use crate::cli::states::State;
 pub struct DownloadMenu {
     menu: String,
     download_state: DownloadState,
+    selected_anime_list: Vec<Anime>,
     selected_anime: Anime,
     download_type: DownloadType,
     selected_episodes: HashSet<Episode>,
@@ -32,6 +33,7 @@ impl Default for DownloadMenu {
         Self::new(
             String::default(),
             DownloadState::default(),
+            Vec::default(),
             Anime::default(),
             DownloadType::default(),
             HashSet::default(),
@@ -46,6 +48,7 @@ impl DownloadMenu {
     fn new(
         menu: String,
         download_state: DownloadState,
+        selected_anime_list: Vec<Anime>,
         selected_anime: Anime,
         download_type: DownloadType,
         selected_episodes: HashSet<Episode>,
@@ -55,6 +58,7 @@ impl DownloadMenu {
         Self {
             menu,
             download_state,
+            selected_anime_list,
             selected_anime,
             download_type,
             selected_episodes,
@@ -79,6 +83,7 @@ impl DownloadMenu {
             DownloadState::SelectThreadCount => self.select_thread_count(action)?,
             DownloadState::Download => {
                 self.start_downloading(action, &cache).await?;
+                self.selected_anime_list = cache.anime.clone();
                 return Ok(State::MainMenu);
             },
         }
@@ -87,7 +92,7 @@ impl DownloadMenu {
     
     fn generate_menu(&mut self, cache: &Cache) {
         match self.download_state {
-            DownloadState::SelectAnime => self.generate_select_anime_list_menu(&cache.anime),
+            DownloadState::SelectAnime => self.generate_select_anime_list_menu(cache),
             DownloadState::SelectDownloadType => self.generate_select_download_type_menu(),
             DownloadState::SelectEpisode => self.generate_select_episode_menu(),
             DownloadState::SelectQuality => self.generate_select_quality_menu(),
@@ -96,9 +101,14 @@ impl DownloadMenu {
         }
     }
     
-    fn generate_select_anime_list_menu(&mut self, anime_list: &Vec<Anime>) {
+    fn generate_select_anime_list_menu(&mut self, cache: &Cache) {
         let mut menu: String = String::new();
-        for (idx, anime) in anime_list.iter().enumerate() {
+
+        if self.selected_anime_list.is_empty() {
+            self.selected_anime_list = cache.anime.clone();
+        }
+        
+        for (idx, anime) in self.selected_anime_list.iter().enumerate() {
             menu += format!("[{}] -> {} ({})\n", idx + 1, anime.name, anime.url).as_str();
         }
         self.menu = menu + "~$ ";
@@ -151,37 +161,54 @@ impl DownloadMenu {
     fn generate_select_all_episodes_menu(&mut self) {
         self.menu = String::from("Selecting all episodes...\n");
     }
-    
+
     fn generate_select_quality_menu(&mut self) {
-        // TODO: Rewrite depended by download type and anime available quality
+        // TODO: If download quality error, not drop program, print info about failed episode and quality
         let mut menu: String = String::new();
         for (idx, quality) in Quality::arr().iter().enumerate() {
             menu += format!("[{}] -> {}\n", idx + 1, quality.val()).as_str();
         }
         self.menu = menu + "~$ ";
     }
-    
+
     fn generate_select_thread_count_menu(&mut self) {
         self.menu = String::from(
             "Select the number of episodes that will be downloaded at the same time\n"
         );
         self.menu += "~$ "
     }
-    
+
     fn generate_download_menu(&mut self) {
-        // TODO: Print all selected data to confirmation
-        self.menu = String::from("Start download? [Y/n]: ");
+        let mut menu: String = String::new();
+        
+        menu += format!("Selected anime: {}\n", self.selected_anime.name).as_str();
+        menu += format!("Selected episodes: {:#?}\n", self.selected_episodes.par_iter().map(|e| e.name.clone()).collect::<Vec<String>>()).as_str();
+        menu += format!("Selected quality: {}\n", self.selected_quality.val()).as_str();
+        menu += format!("Selected thread count: {}\n", self.thread_count).as_str();
+        
+        self.menu = menu + "Start download? [Y/n]: ";
     }
     
     async fn select_anime(&mut self, action: String, cache: &Cache) -> Result<()> {
-        // TODO: Write choose by anime name (not index)
-        let index: usize = self.parse_action(action)?;
-        
-        self.selected_anime = cache.get_anime(index).await?;
-        
-        self.download_state = DownloadState::SelectDownloadType;
+        match self.parse_action(action.clone()) {
+            Ok(index) => {
+                self.selected_anime = self.get_anime(index, cache).await?;
+                self.download_state = DownloadState::SelectDownloadType;
+            },
+            Err(_) => {
+                self.selected_anime_list = cache.get_anime_name(action)?;
+            }
+        }
         
         Ok(())
+    }
+    
+    async fn get_anime(&self, id: usize, cache: &Cache) -> Result<Anime> {
+        let anime: Anime = self.selected_anime_list
+            .get(id)
+            .context("Error when trying to select an anime")?
+            .clone();
+        Ok(cache.get_anime_self(anime).await?)
     }
     
     fn select_download_type(&mut self, action: String) -> Result<()> {
@@ -283,19 +310,36 @@ impl DownloadMenu {
             .get(index)
             .context("Error during quality selection")?
             .clone();
-        
+
         self.download_state = DownloadState::SelectThreadCount;
+        
+        if self.download_type.equal(&DownloadType::default()) {
+            self.thread_count = 1;
+            self.download_state = DownloadState::Download;
+        }
         
         Ok(())
     }
     
     fn select_thread_count(&mut self, action: String) -> Result<()> {
         self.thread_count = action.parse()?;
+        
+        if self.thread_count < 1 {
+            self.thread_count = 1;
+            
+        }
+        
+        if self.thread_count > self.selected_episodes.len() {
+            self.thread_count = self.selected_episodes.len()
+        }
+        
         self.download_state = DownloadState::Download;
+        
         Ok(())
     }
     
     async fn start_downloading(&self, action: String, cache: &Cache) -> Result<()> {
+        // TODO: Rewrite to queue and threads, that take episodes from this queue
         if (action.to_lowercase() != "y") && (action.to_lowercase() != "yes") {
             println!("Download canceled");
             return Ok(());
@@ -304,7 +348,7 @@ impl DownloadMenu {
         let multi_pb: MultiProgress = MultiProgress::new();
         
         let episodes: Vec<Episode> = self.selected_episodes.par_iter().map(|e| e.clone()).collect();
-        let chunks: Vec<&[Episode]> = episodes.par_chunks(episodes.len() / self.thread_count).collect();
+        let chunks: Vec<&[Episode]> = episodes.par_chunks(episodes.len().div_ceil(self.thread_count)).collect();
         let mut handles: Vec<JoinHandle<Result<()>>> = Vec::new();
         
         for chunk in chunks {
@@ -327,10 +371,12 @@ impl DownloadMenu {
             let cache: Cache = cache.clone();
             let eps = chunk.to_vec();
             let quality: Quality = self.selected_quality.clone();
+            
             let handle: JoinHandle<Result<()>> = tokio::task::spawn(async move {
                 cache.download_episodes(eps, quality, &pbs).await?;
                 Ok(())
             });
+            
             handles.push(handle);
         }
 
@@ -366,7 +412,7 @@ impl Default for DownloadState {
 }
 
 
-#[derive(Clone)]
+#[derive(Clone, PartialEq)]
 enum DownloadType {
     OneEpisode(String),
     SomeEpisodes(String),
@@ -390,6 +436,19 @@ impl DownloadType {
             Self::RangeEpisodes(String::from("Download range episodes")),
             Self::AllEpisodes(String::from("Download all episodes")),
         ]
+    }
+
+    pub fn equal(&self, rhs: &Self) -> bool {
+        self.empty() == rhs.empty()
+    }
+
+    pub fn empty(&self) -> Self {
+        match self {
+            Self::OneEpisode(_) => Self::OneEpisode(String::new()),
+            Self::SomeEpisodes(_) => Self::SomeEpisodes(String::new()),
+            Self::RangeEpisodes(_) => Self::RangeEpisodes(String::new()),
+            Self::AllEpisodes(_) => Self::AllEpisodes(String::new()),
+        }
     }
     
     fn val(&self) -> String {

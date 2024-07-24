@@ -17,7 +17,7 @@ async fn main() {
             Ok(_) => break,
             Err(e) => {
                 eprintln!("CRITICAL ERROR: {e}");
-                eprintln!("Restarting...");
+                println!("Restarting...");
             },
         }
     }
