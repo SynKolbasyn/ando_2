@@ -107,7 +107,7 @@ impl DownloadMenu {
         if self.selected_anime_list.is_empty() {
             self.selected_anime_list = cache.anime.clone();
         }
-        
+
         for (idx, anime) in self.selected_anime_list.iter().enumerate() {
             menu += format!("[{}] -> {} ({})\n", idx + 1, anime.name, anime.url).as_str();
         }
@@ -179,15 +179,15 @@ impl DownloadMenu {
 
     fn generate_download_menu(&mut self) {
         let mut menu: String = String::new();
-        
+
         menu += format!("Selected anime: {}\n", self.selected_anime.name).as_str();
         menu += format!("Selected episodes: {:#?}\n", self.selected_episodes.par_iter().map(|e| e.name.clone()).collect::<Vec<String>>()).as_str();
         menu += format!("Selected quality: {}\n", self.selected_quality.val()).as_str();
         menu += format!("Selected thread count: {}\n", self.thread_count).as_str();
-        
+
         self.menu = menu + "Start download? [Y/n]: ";
     }
-    
+
     async fn select_anime(&mut self, action: String, cache: &Cache) -> Result<()> {
         match self.parse_action(action.clone()) {
             Ok(index) => {
@@ -201,7 +201,7 @@ impl DownloadMenu {
         
         Ok(())
     }
-    
+
     async fn get_anime(&self, id: usize, cache: &Cache) -> Result<Anime> {
         let anime: Anime = self.selected_anime_list
             .get(id)
@@ -311,7 +311,7 @@ impl DownloadMenu {
             .clone();
 
         self.download_state = DownloadState::SelectThreadCount;
-        
+
         if self.download_type.equal(&DownloadType::default()) {
             self.thread_count = 1;
             self.download_state = DownloadState::Download;
@@ -322,18 +322,18 @@ impl DownloadMenu {
     
     fn select_thread_count(&mut self, action: String) -> Result<()> {
         self.thread_count = action.parse()?;
-        
+
         if self.thread_count < 1 {
             self.thread_count = 1;
-            
+
         }
-        
+
         if self.thread_count > self.selected_episodes.len() {
             self.thread_count = self.selected_episodes.len()
         }
-        
+
         self.download_state = DownloadState::Download;
-        
+
         Ok(())
     }
     
@@ -368,7 +368,7 @@ impl DownloadMenu {
             }
             
             let cache: Cache = cache.clone();
-            let eps = chunk.to_vec();
+            let eps: Vec<Episode> = chunk.to_vec();
             let quality: Quality = self.selected_quality.clone();
             
             let handle: JoinHandle<()> = tokio::task::spawn(async move {
