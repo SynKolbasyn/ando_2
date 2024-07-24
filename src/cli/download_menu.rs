@@ -163,7 +163,6 @@ impl DownloadMenu {
     }
 
     fn generate_select_quality_menu(&mut self) {
-        // TODO: If download quality error, not drop program, print info about failed episode and quality
         let mut menu: String = String::new();
         for (idx, quality) in Quality::arr().iter().enumerate() {
             menu += format!("[{}] -> {}\n", idx + 1, quality.val()).as_str();
@@ -349,7 +348,7 @@ impl DownloadMenu {
         
         let episodes: Vec<Episode> = self.selected_episodes.par_iter().map(|e| e.clone()).collect();
         let chunks: Vec<&[Episode]> = episodes.par_chunks(episodes.len().div_ceil(self.thread_count)).collect();
-        let mut handles: Vec<JoinHandle<Result<()>>> = Vec::new();
+        let mut handles: Vec<JoinHandle<()>> = Vec::new();
         
         for chunk in chunks {
             let mut pbs: Vec<ProgressBar> = Vec::new();
@@ -372,16 +371,15 @@ impl DownloadMenu {
             let eps = chunk.to_vec();
             let quality: Quality = self.selected_quality.clone();
             
-            let handle: JoinHandle<Result<()>> = tokio::task::spawn(async move {
-                cache.download_episodes(eps, quality, &pbs).await?;
-                Ok(())
+            let handle: JoinHandle<()> = tokio::task::spawn(async move {
+                cache.download_episodes(eps, quality, &pbs).await;
             });
             
             handles.push(handle);
         }
 
         for handle in handles {
-            handle.await??;
+            handle.await?;
         }
         
         Ok(())

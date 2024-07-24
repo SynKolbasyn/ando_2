@@ -109,7 +109,7 @@ impl Cache {
         self.update()?;
         Ok(())
     }
-    
+
     pub async fn get_anime_self(&self, anime: Anime) -> Result<Anime> {
         let anime_html: String = self.net.get_anime_html(anime.url).await?;
         Ok(self.parser.parse_anime(anime_html)?)
@@ -117,13 +117,13 @@ impl Cache {
 
     pub fn get_anime_name(&self, name: String) -> Result<Vec<Anime>> {
         let mut result: Vec<Anime> = Vec::new();
-        
+
         for anime in &self.anime {
             if anime.name.to_lowercase().contains(name.to_lowercase().as_str()) {
                 result.push(anime.clone());
             }
         }
-        
+
         Ok(result)
     }
     
@@ -135,11 +135,14 @@ impl Cache {
         Ok(())
     }
     
-    pub async fn download_episodes(&self, episodes: Vec<Episode>, quality: Quality, pbs: &Vec<ProgressBar>) -> Result<()> {
+    pub async fn download_episodes(&self, episodes: Vec<Episode>, quality: Quality, pbs: &Vec<ProgressBar>) {
         for i in 0..episodes.len() {
-            self.download_episode(episodes[i].clone(), quality.clone(), &pbs[i]).await?;
+            self.download_episode(episodes[i].clone(), quality.clone(), &pbs[i]).await
+                .unwrap_or_else(
+                    |e| {
+                        eprintln!("Error during episode download: {e}");
+                    });
         }
-        Ok(())
     }
     
     fn folder(&self) -> Result<&Path> {
